@@ -168,12 +168,18 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher]:
 
 
 def build_model() -> [nn.Module, nn.Module]:
-    arbsr_model = model.__dict__[config.model_arch_name]()
+    arbsr_model = model.__dict__[config.model_arch_name](in_channels=config.in_channels,
+                                                         out_channels=config.out_channels,
+                                                         channels=config.channels,
+                                                         num_rcab=config.num_rcab,
+                                                         num_rg=config.num_rg,
+                                                         reduce_channels=config.reduce_channels,
+                                                         bias=config.bias,
+                                                         num_experts=config.num_experts)
     arbsr_model = arbsr_model.to(device=config.device)
 
     # Create an Exponential Moving Average Model
-    ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged: (
-                                                                                      1 - config.model_ema_decay) * averaged_model_parameter + config.model_ema_decay * model_parameter
+    ema_avg = lambda averaged_model_parameter, model_parameter, num_averaged: (1 - config.model_ema_decay) * averaged_model_parameter + config.model_ema_decay * model_parameter
     ema_arbsr_model = AveragedModel(arbsr_model, avg_fn=ema_avg)
 
     return arbsr_model, ema_arbsr_model
