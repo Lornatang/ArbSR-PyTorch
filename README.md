@@ -108,7 +108,7 @@ Output:
 ```text
 Build `arbsr_rcan` model successfully.
 Load `arbsr_rcan` model weights `./results/pretrained_models/ArbSR_RCAN_x1_x4-DIV2K-8c206342.pth.tar` successfully.
-SR image save to `./figure/baboon_lr.png`
+SR image save to `./figure/119082_lr.png`
 ```
 
 ## Contributing
