@@ -14,7 +14,6 @@
 import os
 
 import cv2
-import numpy as np
 import torch
 from natsort import natsorted
 
@@ -33,7 +32,12 @@ def main() -> None:
     # Initialize the super-resolution sr_model
     sr_model = model.__dict__[config.model_arch_name](in_channels=config.in_channels,
                                                       out_channels=config.out_channels,
-                                                      channels=config.channels)
+                                                      channels=config.channels,
+                                                      num_rcab=config.num_rcab,
+                                                      num_rg=config.num_rg,
+                                                      reduce_channels=config.reduce_channels,
+                                                      bias=config.bias,
+                                                      num_experts=config.num_experts)
     sr_model = sr_model.to(device=config.device)
     print(f"Build `{config.model_arch_name}` model successfully.")
 
@@ -76,7 +80,7 @@ def main() -> None:
 
         # Only reconstruct the Y channel image data.
         with torch.no_grad():
-            sr_tensor = sr_model(lr_tensor)
+            sr_tensor = sr_model(lr_tensor, config.upscale_factor, config.upscale_factor)
 
         # Save image
         sr_image = imgproc.tensor_to_image(sr_tensor, False, False)

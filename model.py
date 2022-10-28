@@ -21,12 +21,12 @@ from torch import nn
 from torch.nn import functional as F_torch
 
 __all__ = [
-    "ArbRCAN",
-    "arb_rcan",
+    "ArbSRRCAN",
+    "arbsr_rcan",
 ]
 
 
-class ArbRCAN(nn.Module):
+class ArbSRRCAN(nn.Module):
     def __init__(
             self,
             in_channels: int = 3,
@@ -38,7 +38,7 @@ class ArbRCAN(nn.Module):
             bias: bool = False,
             num_experts: int = 4,
     ) -> None:
-        super(ArbRCAN, self).__init__()
+        super(ArbSRRCAN, self).__init__()
         self.num_rg = num_rg
 
         # First layer
@@ -50,14 +50,14 @@ class ArbRCAN(nn.Module):
             trunk.append(_ResidualGroup(channels, reduce_channels, num_rcab))
         self.trunk = nn.Sequential(*trunk)
 
-        # Second layer
-        self.conv2 = nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1))
-
         # Scale-aware feature adaption block
         scale_aware_adaption = []
-        for i in range(self.num_rg):
+        for i in range(num_rg):
             scale_aware_adaption.append(_ScaleAwareFeatureAdaption(channels))
         self.scale_aware_adaption = nn.Sequential(*scale_aware_adaption)
+
+        # Second layer
+        self.conv2 = nn.Conv2d(channels, channels, (3, 3), (1, 1), (1, 1))
 
         # Scale-aware upsampling layer
         self.scale_aware_upsample = _ScaleAwareUpsampling(channels, bias, num_experts)
@@ -91,13 +91,13 @@ class ArbRCAN(nn.Module):
 def _grid_sample(x: Tensor, offset: Tensor, w_scale: Tensor, h_scale: Tensor) -> Tensor:
     # Generate grids
     b, _, h, w = x.size()
-    grid = np.meshgrid(range(round(h_scale * w)), range(round(w_scale * h)))
+    grid = np.meshgrid(range(round(w_scale * w)), range(round(h_scale * h)))
     grid = np.stack(grid, axis=-1).astype(np.float64)
     grid = torch.Tensor(grid).to(x.device)
 
     # project into LR space
-    grid[:, :, 0] = (grid[:, :, 0] + 0.5) / h_scale - 0.5
-    grid[:, :, 1] = (grid[:, :, 1] + 0.5) / w_scale - 0.5
+    grid[:, :, 0] = (grid[:, :, 0] + 0.5) / w_scale - 0.5
+    grid[:, :, 1] = (grid[:, :, 1] + 0.5) / h_scale - 0.5
 
     # normalize to [-1, 1]
     grid[:, :, 0] = grid[:, :, 0] * 2 / (w - 1) - 1
@@ -112,7 +112,7 @@ def _grid_sample(x: Tensor, offset: Tensor, w_scale: Tensor, h_scale: Tensor) ->
     grid = grid.permute(0, 2, 3, 1)
 
     # sampling
-    output = F_torch.grid_sample(x, grid, padding_mode="zeros", align_corners=False)
+    output = F_torch.grid_sample(x, grid, padding_mode="zeros", align_corners=True)
 
     return output
 
@@ -176,7 +176,7 @@ class _ScaleAwareConv(nn.Module):
         # Use fc layers to generate routing weights
         w_scale /= torch.ones(1, 1).to(device)
         h_scale /= torch.ones(1, 1).to(device)
-        routing_weights = self.routing(torch.cat([w_scale, h_scale], 1)).view(self.num_experts, 1, 1)
+        routing_weights = self.routing(torch.cat([h_scale, w_scale], 1)).view(self.num_experts, 1, 1)
 
         # Fuse experts
         fused_weight = (self.weight_pool.view(self.num_experts, -1, 1) * routing_weights).sum(0)
@@ -221,7 +221,7 @@ class _ScaleAwareFeatureAdaption(nn.Module):
         identity = x
 
         mask = self.mask(x)
-        adaption = self.adaption(x, w_scale, h_scale)
+        adaption = self.adaption(x, h_scale, w_scale)
 
         out = torch.mul(adaption, mask)
         out = torch.add(out, identity)
@@ -256,18 +256,18 @@ class _ScaleAwareUpsampling(nn.Module):
 
         # Feature layer
         self.features = nn.Sequential(
-            nn.Conv2d(4, 64, 1, 1, 0, bias=True),
+            nn.Conv2d(4, 64, (1, 1), (1, 1), (0, 0)),
             nn.ReLU(True),
-            nn.Conv2d(64, 64, 1, 1, 0, bias=True),
+            nn.Conv2d(64, 64, (1, 1), (1, 1), (0, 0)),
             nn.ReLU(True),
         )
 
         # Offset layer
-        self.offset = nn.Conv2d(64, 2, 1, 1, 0, bias=True)
+        self.offset = nn.Conv2d(64, 2, (1, 1), (1, 1), (0, 0))
 
         # Routing layer
         self.routing = nn.Sequential(
-            nn.Conv2d(64, num_experts, 1, 1, 0, bias=True),
+            nn.Conv2d(64, num_experts, (1, 1), (1, 1), (0, 0)),
             nn.Sigmoid()
         )
 
@@ -397,7 +397,7 @@ class _ResidualGroup(nn.Module):
         return out
 
 
-def arb_rcan(**kwargs: Any) -> ArbRCAN:
-    model = ArbRCAN(**kwargs)
+def arbsr_rcan(**kwargs: Any) -> ArbSRRCAN:
+    model = ArbSRRCAN(**kwargs)
 
     return model

@@ -28,7 +28,7 @@ cudnn.benchmark = True
 # When evaluating the performance of the SR model, whether to verify only the Y channel image data
 only_test_y_channel = True
 # Model architecture name
-model_arch_name = "arb_rcan"
+model_arch_name = "arbsr_rcan"
 # Model arch config
 in_channels = 3
 out_channels = 3
@@ -49,13 +49,13 @@ upscale_factor = 4
 # Current configuration parameter method
 mode = "train"
 # Experiment name, easy to save weights and log files
-exp_name = "ArbSR_RCAN-DIV2K"
+exp_name = "ArbSR_RCAN_x1_x4-DIV2K"
 
 if mode == "train":
     # Dataset address
     train_gt_images_dir = f"./data/DIV2K/ArbSR/train"
 
-    test_gt_images_dir = f"./data/Set5/GTmod12"
+    test_gt_images_dir = f"./data/Set5/GTmod{upscale_factor}"
     test_lr_images_dir = f"./data/Set5/LRbicx{upscale_factor}"
 
     lr_image_size = 50
@@ -96,6 +96,6 @@ if mode == "test":
     # Test data address
     lr_dir = f"./data/Set5/LRbicx{upscale_factor}"
     sr_dir = f"./results/test/{exp_name}"
-    gt_dir = f"./data/Set5/GTmod12"
+    gt_dir = f"./data/Set5/GTmod{upscale_factor}"
 
-    model_weights_path = ""
+    model_weights_path = "./results/pretrained_models/ArbSR_RCAN_x1_x4-DIV2K-8c206342.pth.tar"

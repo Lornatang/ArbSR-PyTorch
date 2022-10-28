@@ -71,7 +71,7 @@ def main():
     if config.resume_model_weights_path:
         arbsr_model, ema_arbsr_model, start_epoch, best_psnr, best_ssim, optimizer, scheduler = load_state_dict(
             arbsr_model,
-            config.pretrained_model_weights_path,
+            config.resume_model_weights_path,
             ema_arbsr_model,
             optimizer,
             scheduler,

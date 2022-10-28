@@ -34,7 +34,7 @@ def load_state_dict(
         optimizer: torch.optim.Optimizer = None,
         scheduler: torch.optim.lr_scheduler = None,
         load_mode: str = None,
-) -> tuple[Module, Module, Any, Any, Optimizer | None, Any] | tuple[Module, Any, Any, Optimizer | None, Any] | Module:
+) -> tuple[Module, Module, Any, Any, Any, Optimizer | None, Any] | tuple[Module, Any, Any, Any, Optimizer | None, Any] | Module:
     # Load model weights
     checkpoint = torch.load(model_weights_path, map_location=lambda storage, loc: storage)
 
@@ -42,6 +42,7 @@ def load_state_dict(
         # Restore the parameters in the training node to this point
         start_epoch = checkpoint["epoch"]
         best_psnr = checkpoint["best_psnr"]
+        best_ssim = checkpoint["best_ssim"]
         # Load model state dict. Extract the fitted model weights
         model_state_dict = model.state_dict()
         state_dict = {k: v for k, v in checkpoint["state_dict"].items() if k in model_state_dict.keys()}
@@ -63,7 +64,7 @@ def load_state_dict(
             ema_model_state_dict.update(ema_state_dict)
             ema_model.load_state_dict(ema_model_state_dict)
 
-        return model, ema_model, start_epoch, best_psnr, optimizer, scheduler
+        return model, ema_model, start_epoch, best_psnr, best_ssim, optimizer, scheduler
     else:
         # Load model state dict. Extract the fitted model weights
         model_state_dict = model.state_dict()
