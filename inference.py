@@ -40,7 +40,12 @@ def build_model(model_arch_name: str, device: torch.device) -> nn.Module:
     # Initialize the super-resolution model
     sr_model = model.__dict__[model_arch_name](in_channels=3,
                                                out_channels=3,
-                                               channels=64)
+                                               channels=64,
+                                               num_rcab=20,
+                                               num_rg=10,
+                                               reduce_channels=16,
+                                               bias=False,
+                                               num_experts=4)
     sr_model = sr_model.to(device=device)
 
     return sr_model
@@ -64,7 +69,7 @@ def main(args):
 
     # Use the model to generate super-resolved images
     with torch.no_grad():
-        sr_tensor = sr_model(lr_tensor)
+        sr_tensor = sr_model(lr_tensor, args.width_upscale_factor, args.height_upscale_factor)
 
     # Save image
     sr_image = imgproc.tensor_to_image(sr_tensor, False, False)
@@ -78,7 +83,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Using the model generator super-resolution images.")
     parser.add_argument("--model_arch_name",
                         type=str,
-                        default="rdn_small_x4")
+                        default="arbsr_rcan")
     parser.add_argument("--inputs_path",
                         type=str,
                         default="./figure/119082_lr.png",
@@ -87,13 +92,17 @@ if __name__ == "__main__":
                         type=str,
                         default="./figure/119082_sr.png",
                         help="Super-resolution image path.")
-    parser.add_argument("--upscale_factor",
-                        type=int,
-                        default=4,
-                        help="Model upscale factor")
+    parser.add_argument("--width_upscale_factor",
+                        type=float,
+                        default=4.0,
+                        help="Model width upscale factor")
+    parser.add_argument("--height_upscale_factor",
+                        type=float,
+                        default=4.0,
+                        help="Model height upscale factor")
     parser.add_argument("--model_weights_path",
                         type=str,
-                        default="./results/pretrained_models/RDN_small_x4-DIV2K-543022e7.pth.tar",
+                        default="./results/pretrained_models/ArbSR_RCAN_x1_x4-DIV2K-8c206342.pth.tar",
                         help="Model weights file path.")
     parser.add_argument("--device_type",
                         type=str,
